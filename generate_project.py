@@ -4,6 +4,7 @@ import os
 import json
 import subprocess
 import argparse
+import sys
 
 parser = argparse.ArgumentParser(description="Project generator")
 
@@ -137,5 +138,14 @@ def generate_project():
         raise
 
 
-if __name__ == "__main__":
+def main() -> int:
+    if not os.path.isfile(COMPILER_PATH):
+        print(f"No compiler at {COMPILER_PATH}")
+        return 1
+
     generate_project()
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
