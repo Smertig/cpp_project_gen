@@ -121,7 +121,9 @@ def generate_project():
     print(f"Generating project at {PROJECT_DIR.as_posix()}")
 
     try:
-        shutil.rmtree(PROJECT_DIR, ignore_errors=True)
+        if os.path.exists(PROJECT_DIR):
+            print("Removing existing project")
+            shutil.rmtree(PROJECT_DIR)
 
         os.makedirs(PROJECT_DIR, exist_ok=True)
 
