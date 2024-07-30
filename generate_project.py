@@ -21,13 +21,13 @@ COMPILER_PATH = args.compiler
 NUMBER_OF_SOURCES = args.sources
 NUMBER_OF_HEADERS = args.headers
 SUBDIR_COUNT = args.subdirs
+OUTPUT_DIR = pathlib.Path(args.output) if args.output is not None else pathlib.Path.cwd()
 PROJECT_NAME = args.name or f"BigProject_{NUMBER_OF_SOURCES}_{NUMBER_OF_HEADERS}"
 
 SOURCES_PER_DIR = (NUMBER_OF_SOURCES + SUBDIR_COUNT - 1) // SUBDIR_COUNT
 HEADERS_PER_DIR = (NUMBER_OF_HEADERS + SUBDIR_COUNT - 1) // SUBDIR_COUNT
 
-ROOT_DIR = pathlib.Path(args.output) if args.output is not None else pathlib.Path.cwd()
-PROJECT_DIR = ROOT_DIR / PROJECT_NAME
+PROJECT_DIR = OUTPUT_DIR / PROJECT_NAME
 SOURCES_DIR = PROJECT_DIR / "sources"
 INCLUDES_DIR = PROJECT_DIR / "includes"
 
@@ -149,3 +149,4 @@ def main() -> int:
 
 if __name__ == "__main__":
     sys.exit(main())
+
