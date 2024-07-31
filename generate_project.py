@@ -5,6 +5,7 @@ import json
 import subprocess
 import argparse
 import sys
+import time
 
 parser = argparse.ArgumentParser(description="Project generator")
 
@@ -34,6 +35,18 @@ SOURCES_DIR = PROJECT_DIR / "sources"
 INCLUDES_DIR = PROJECT_DIR / "includes"
 
 
+class ProgressReporter:
+    def __init__(self, interval=5):
+        self._last_report = time.time()
+        self._interval = interval
+
+    def report(self, msg: str):
+        now = time.time()
+        if now - self._last_report > self._interval:
+            print(msg)
+            self._last_report = now
+
+
 def get_source_subdir(i: int) -> str:
     return f"subdir_{i // SOURCES_PER_DIR}"
 
@@ -56,18 +69,18 @@ static void test_{i}(int a, int b) {{
 
 
 def get_header_template(i: int) -> str:
-    function_declaration = f"void foo_{i}(int a, int b);"
+    function_declaration = f"void foo_{i}(int a, int b);\n" * NUMBER_OF_LINES_IN_HEADER
 
     return f"""
 #pragma once
 
 // Some function
-{"\n".join([function_declaration for _ in range(NUMBER_OF_LINES_IN_HEADER)])}
+{function_declaration}
 
     """.strip()
 
 
-def generate_sources():
+def generate_sources(progress: ProgressReporter):
     os.makedirs(SOURCES_DIR)
     all_sources = []
     for i in range(NUMBER_OF_SOURCES):
@@ -78,14 +91,17 @@ def generate_sources():
             source.write(get_source_template(i))
             all_sources.append(source_path)
 
+            progress.report(f"Generated {i} of {NUMBER_OF_SOURCES} sources")
+
     return all_sources
 
 
-def generate_headers():
+def generate_headers(progress: ProgressReporter):
     os.makedirs(INCLUDES_DIR)
     all_include_dirs = set()
     for i in range(NUMBER_OF_HEADERS):
         subdir = INCLUDES_DIR / get_include_subdir(i)
+
         os.makedirs(subdir, exist_ok=True)
 
         all_include_dirs.add(subdir)
@@ -93,15 +109,17 @@ def generate_headers():
         with open(subdir / f"file_{i}.h", "w") as header:
             header.write(get_header_template(i))
 
+            progress.report(f"Generated {i} of {NUMBER_OF_HEADERS} headers")
+
     return sorted(all_include_dirs)
 
 
-def generate_compile_commands(sources: list[pathlib.Path], headers: list[pathlib.Path]):
+def generate_compile_commands(sources: list[pathlib.Path], headers: list[pathlib.Path], progress: ProgressReporter):
     include_flags = [f"-I{include_dir.relative_to(PROJECT_DIR).as_posix()}" for include_dir in sorted(headers)]
 
     with open(PROJECT_DIR / f'compile_commands.json', 'w') as file:
         compile_commands = []
-        for source in sources:
+        for i, source in enumerate(sources):
             command = [COMPILER_PATH]
 
             if COMPILER_PATH.endswith("clang-cl.exe"):
@@ -119,10 +137,13 @@ def generate_compile_commands(sources: list[pathlib.Path], headers: list[pathlib
                 "command": subprocess.list2cmdline(command),
                 "file": source.relative_to(PROJECT_DIR).as_posix()
             })
+
+            progress.report(f"Generated {i} of {len(sources)} compile commands")
+
         json.dump(compile_commands, file, indent=4)
 
 
-def generate_project():
+def generate_project(progress: ProgressReporter):
     print(f"Generating project at {PROJECT_DIR.as_posix()}")
 
     try:
@@ -132,10 +153,10 @@ def generate_project():
 
         os.makedirs(PROJECT_DIR, exist_ok=True)
 
-        all_sources = generate_sources()
-        all_include_dirs = generate_headers()
+        all_sources = generate_sources(progress)
+        all_include_dirs = generate_headers(progress)
 
-        generate_compile_commands(all_sources, all_include_dirs)
+        generate_compile_commands(all_sources, all_include_dirs, progress)
     except:
         print("Project generation failed, cleaning up...")
         shutil.rmtree(PROJECT_DIR, ignore_errors=True)
@@ -147,7 +168,8 @@ def main() -> int:
         print(f"No compiler at {COMPILER_PATH}")
         return 1
 
-    generate_project()
+    progress = ProgressReporter()
+    generate_project(progress)
     return 0
 
 
