@@ -9,7 +9,9 @@ import time
 
 parser = argparse.ArgumentParser(description="Project generator")
 
-parser.add_argument("--compiler", type=str, required=True, help="path to the compiler")
+parser.add_argument("--project-model", type=str, choices=['cmake', 'compdb'], default='cmake',
+                    help="project model to use, 'cmake' or 'compdb' ('cmake' by default)")
+parser.add_argument("--compiler", type=str, help="path to the compiler")
 parser.add_argument("--sources", type=int, default=50000, help="number of source files (50000 by default)")
 parser.add_argument("--headers", type=int, default=10000, help="number of header files (10000 by default)")
 parser.add_argument("--subdirs", type=int, default=250, help="number of sub-directories (250 by default)")
@@ -20,12 +22,19 @@ parser.add_argument("--name", type=str, default=None, help="project name (auto-g
 args = parser.parse_args()
 
 COMPILER_PATH = args.compiler
+PROJECT_MODEL = args.project_model
 NUMBER_OF_SOURCES = args.sources
 NUMBER_OF_HEADERS = args.headers
 SUBDIR_COUNT = args.subdirs
 NUMBER_OF_LINES_IN_HEADER = args.header_lines
 OUTPUT_DIR = pathlib.Path(args.output) if args.output is not None else pathlib.Path.cwd()
 PROJECT_NAME = args.name or f"BigProject_{NUMBER_OF_SOURCES}_{NUMBER_OF_HEADERS}"
+
+# Validation
+if PROJECT_MODEL == 'compdb' and COMPILER_PATH is None:
+    parser.error("Compiler path is required when using compdb project model")
+elif COMPILER_PATH is not None and not os.path.isfile(COMPILER_PATH):
+    parser.error(f"No compiler at {COMPILER_PATH}")
 
 SOURCES_PER_DIR = (NUMBER_OF_SOURCES + SUBDIR_COUNT - 1) // SUBDIR_COUNT
 HEADERS_PER_DIR = (NUMBER_OF_HEADERS + SUBDIR_COUNT - 1) // SUBDIR_COUNT
@@ -143,6 +152,34 @@ def generate_compile_commands(sources: list[pathlib.Path], headers: list[pathlib
         json.dump(compile_commands, file, indent=4)
 
 
+def generate_cmake_lists(sources: list[pathlib.Path], headers: list[pathlib.Path], progress: ProgressReporter):
+    # include_flags = [f"-I{include_dir.relative_to(PROJECT_DIR).as_posix()}" for include_dir in sorted(headers)]
+
+    with open(PROJECT_DIR / f'CMakeLists.txt', 'w') as file:
+        file.write("cmake_minimum_required(VERSION 3.29)\n")
+        file.write(f"project({PROJECT_NAME})\n")
+        file.write(f"\n")
+        file.write(f"set(CMAKE_CXX_STANDARD 20)\n")
+        file.write("add_executable(my_exe)\n")
+        file.write(f"\n")
+
+        file.write("target_sources(my_exe PRIVATE\n")
+
+        for i, source in enumerate(sources):
+            file.write(f"    \"{source.relative_to(PROJECT_DIR).as_posix()}\"\n")
+
+        file.write(")\n")
+        file.write(f"\n")
+
+        file.write("target_include_directories(my_exe PRIVATE\n")
+
+        for i, header in enumerate(headers):
+            file.write(f"    \"{header.relative_to(PROJECT_DIR).as_posix()}\"\n")
+
+        file.write(")\n")
+        file.write(f"\n")
+
+
 def generate_project(progress: ProgressReporter):
     print(f"Generating project at {PROJECT_DIR.as_posix()}")
 
@@ -156,7 +193,12 @@ def generate_project(progress: ProgressReporter):
         all_sources = generate_sources(progress)
         all_include_dirs = generate_headers(progress)
 
-        generate_compile_commands(all_sources, all_include_dirs, progress)
+        if PROJECT_MODEL == 'compdb':
+            generate_compile_commands(all_sources, all_include_dirs, progress)
+        elif PROJECT_MODEL == 'cmake':
+            generate_cmake_lists(all_sources, all_include_dirs, progress)
+        else:
+            assert False, "unreachable"
     except:
         print("Project generation failed, cleaning up...")
         shutil.rmtree(PROJECT_DIR, ignore_errors=True)
@@ -164,10 +206,6 @@ def generate_project(progress: ProgressReporter):
 
 
 def main() -> int:
-    if not os.path.isfile(COMPILER_PATH):
-        print(f"No compiler at {COMPILER_PATH}")
-        return 1
-
     progress = ProgressReporter()
     generate_project(progress)
     return 0

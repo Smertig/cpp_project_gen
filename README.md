@@ -6,12 +6,14 @@ Basic usage: `generate_project.py --compiler=PATH_TO_COMPILER`
 Advanced usage:
 
 ```bash
-usage: generate_project.py [-h] --compiler COMPILER [--sources SOURCES] [--headers HEADERS] [--subdirs SUBDIRS] [--header-lines HEADER_LINES] [--output OUTPUT] [--name NAME]
+usage: generate_project.py [-h] [--project-model {cmake,compdb}] [--compiler COMPILER] [--sources SOURCES] [--headers HEADERS] [--subdirs SUBDIRS] [--header-lines HEADER_LINES] [--output OUTPUT] [--name NAME]
 
 Project generator
 
 options:
   -h, --help            show this help message and exit
+  --project-model {cmake,compdb}
+                        project model to use, 'cmake' or 'compdb' ('cmake' by default)
   --compiler COMPILER   path to the compiler
   --sources SOURCES     number of source files (50000 by default)
   --headers HEADERS     number of header files (10000 by default)
