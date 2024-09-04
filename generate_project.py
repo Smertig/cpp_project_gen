@@ -153,10 +153,13 @@ def generate_compile_commands(sources: list[pathlib.Path], headers: list[pathlib
 
 
 def generate_cmake_lists(sources: list[pathlib.Path], headers: list[pathlib.Path], progress: ProgressReporter):
-    # include_flags = [f"-I{include_dir.relative_to(PROJECT_DIR).as_posix()}" for include_dir in sorted(headers)]
-
     with open(PROJECT_DIR / f'CMakeLists.txt', 'w') as file:
-        file.write("cmake_minimum_required(VERSION 3.29)\n")
+        file.write("#\n")
+        file.write(f"# Generated with {" ".join(sys.argv)}\n")
+        file.write("#\n")
+        file.write("\n")
+
+        file.write("cmake_minimum_required(VERSION 3.20)\n")
         file.write(f"project({PROJECT_NAME})\n")
         file.write(f"\n")
         file.write(f"set(CMAKE_CXX_STANDARD 20)\n")
