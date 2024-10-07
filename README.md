@@ -1,7 +1,7 @@
 # cpp_project_gen
 Dumb project generator (mostly for IDE stress-testing)
 
-Basic usage: `generate_project.py --compiler=PATH_TO_COMPILER`
+Basic usage: `generate_project.py`
 
 Advanced usage:
 
